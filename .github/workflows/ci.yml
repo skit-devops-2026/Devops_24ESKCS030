@@ -1,0 +1,58 @@
+name: EventHive CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test-and-lint:
+    name: Build, Audit & Test Suite
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:6.0
+        ports:
+          - 27017:27017
+
+    env:
+      PORT: 5000
+      MONGO_URI: mongodb://127.0.0.1:27017/eventhive_test
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci || npm install
+
+      - name: Validate Repository Compliance (No Secrets or Build Artifacts)
+        run: |
+          echo "Checking for committed secrets or prohibited build artifacts..."
+          if git ls-files | grep -E "(^node_modules/|^\.env$|^dist/|^venv/)"; then
+            echo "ERROR: Prohibited build artifacts or secrets tracked in git index!"
+            exit 1
+          else
+            echo "SUCCESS: Repository is clean of forbidden artifacts."
+          fi
+
+      - name: Verify Environment Template
+        run: |
+          test -f .env.example || { echo "Missing .env.example template"; exit 1; }
+          echo ".env.example is present."
+
+      - name: Run Automated Test Suite
+        run: npm test
