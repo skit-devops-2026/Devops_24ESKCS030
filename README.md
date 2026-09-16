@@ -5,11 +5,22 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![DevOps Course](https://img.shields.io/badge/Course-DevOps%20MT1-orange.svg)](#rubric-compliance--marks-mapping)
 
-EventHive is a centralized campus event governance and participation system designed to streamline event proposals, multi-tier hierarchical approvals, venue sanctions, participant registrations, and automated pass generation across college student bodies, faculty departments, and institutional authorities.
+EventHive is a centralized, full-stack campus event governance and participation portal designed to modernize college event workflows. By transitioning traditional paper-based approvals and unstructured communication into a structured digital pipeline, EventHive delivers end-to-end management for club proposals, multi-tier departmental vetting, campus venue sanctions, student team registrations, and automated entry pass generation across student bodies, faculty mentors, and institutional administrators.
 
 ---
 
-## System Architecture & Multi-Tier Role Governance
+## Core Features & Capabilities
+
+- 🏛️ **Multi-Tier Hierarchical Approvals**: Guided lifecycle moving proposals through Club Submission, Faculty Domain Review, and final HOD Clearance.
+- 🎯 **Domain-Segregated Evaluation**: Targeted review streams for NSS, Tech, Non-Tech/Cultural, Sports, and Robotics departments.
+- 📍 **Venue & Budget Governance**: Centralized institutional resource sanctioning and venue binding to eliminate scheduling conflicts.
+- 🎟️ **Automated Pass Generation**: Instant generation of unique, verifiable entry passes (`PASS-XXXXXX`) supporting solo and multi-member teams.
+- 🔐 **Role-Based Access Control (RBAC)**: Secure bcrypt-authenticated portals tailored for Students, Club Organizers, Faculty Mentors, and HOD Authority.
+- ⚙️ **DevOps & CI/CD Readiness**: Integrated GitHub Actions pipeline with containerized MongoDB services and a multi-stage Jenkins declarative pipeline.
+
+---
+
+## System Architecture & Campus Workflow
 
 EventHive enforces strict institutional separation of duties across four campus personas:
 
@@ -38,10 +49,14 @@ EventHive enforces strict institutional separation of duties across four campus 
 +-----------------------------------------------------------------------+
 ```
 
-1. **Student**: Explores published live events, registers individually or as team leads, and generates unique QR/Alpha-Numeric entry passes.
-2. **Club Organizer**: Proposes new campus initiatives, tracks event approval pipelines, and monitors registered participant counts.
-3. **Faculty Mentor**: Reviews domain proposals (NSS, Tech, Non-Tech, Sports, Robotics) and endorses academic feasibility.
-4. **Head of Department (HOD)**: Grants final institutional clearance, allocates campus venues, and activates live registration.
+### End-to-End Workflow Lifecycle
+
+1. **Proposal Submission (Club Organizer)**: The club lead submits an event proposal specifying category, proposed dates, estimated budget, and team size limits.
+2. **Faculty Mentor Review (Department)**: Domain faculty evaluate the event for academic compliance and either approve or reject the proposal.
+3. **Institutional Clearance (HOD / Admin)**: The Head of Department reviews approved proposals, sanctions the budget, allocates the physical venue, and flips `isLive = true`.
+4. **Live Catalog Publication (Campus)**: The event instantly reflects in the student portal catalog as an active campus initiative.
+5. **Registration & Pass Issuance (Student)**: Students register individually or with squad members, immediately receiving a unique alpha-numeric entry pass (`PASS-XXXXXX`).
+
 
 ---
 
@@ -151,6 +166,8 @@ npm install
 npm start
 ```
 
+*Note for Windows users:* If PowerShell script execution policies restrict running `npm`, run `npm.cmd start` or `node server.js`.
+
 The portal will be live at `http://localhost:5000`. Navigate to `http://localhost:5000/login.html` to sign in.
 
 ---
@@ -164,6 +181,8 @@ Run all tests:
 ```bash
 npm test
 ```
+
+*(On Windows PowerShell, use `npm.cmd test` or `node --test` if script execution is restricted).*
 
 ### Test Coverage Highlights
 
