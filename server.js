@@ -9,6 +9,19 @@ const User = require('./models/User');
 const Event = require('./models/Event');
 const Registration = require('./models/Registration');
 
+// Domain Constants
+const ALLOWED_ROLES = ['student', 'club', 'faculty', 'hod'];
+const ALLOWED_CATEGORIES = ['NSS', 'Tech', 'Non-Tech', 'Sports', 'Robotics'];
+const ALLOWED_STATUSES = ['Pending', 'Approved', 'Rejected'];
+
+/**
+ * Generates a formatted unique alphanumeric event entry pass ID.
+ * Format: PASS-XXXXXX (where X is a 6-digit number)
+ */
+function generatePassId() {
+  return 'PASS-' + Math.floor(100000 + Math.random() * 900000);
+}
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -19,7 +32,13 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/eventhive')
   .then(() => console.log('✅ Connected to MongoDB EventHive Database'))
   .catch(err => console.error('❌ MongoDB Connection Error:', err));
 
-// --- AUTH ROUTES ---
+// ==========================================
+// AUTHENTICATION ROUTES
+// ==========================================
+
+/**
+ * Register a new student or club user account
+ */
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, email, password, role, uniqueId, domain, year } = req.body;
@@ -27,8 +46,7 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'Please provide all required fields: name, email, password, role, and roll number/ID.' });
     }
 
-    const validRoles = ['student', 'club', 'faculty', 'hod'];
-    if (!validRoles.includes(role)) {
+    if (!ALLOWED_ROLES.includes(role)) {
       return res.status(400).json({ error: 'Invalid user role specified.' });
     }
 
@@ -44,6 +62,9 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+/**
+ * Authenticate user credentials and return user role session context
+ */
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password, role } = req.body;
@@ -63,7 +84,13 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// --- EVENT MANAGEMENT ROUTES ---
+// ==========================================
+// EVENT MANAGEMENT & LIFECYCLE ROUTES
+// ==========================================
+
+/**
+ * Retrieve all approved and published live events for students
+ */
 app.get('/api/events/live', async (req, res) => {
   try {
     const events = await Event.find({ isLive: true }).sort({ createdAt: -1 });
@@ -73,6 +100,9 @@ app.get('/api/events/live', async (req, res) => {
   }
 });
 
+/**
+ * Submit an initial event proposal (Club Organizer)
+ */
 app.post('/api/events/propose', async (req, res) => {
   try {
     const { title, category, date, venue, budget } = req.body;
@@ -80,8 +110,7 @@ app.post('/api/events/propose', async (req, res) => {
       return res.status(400).json({ error: 'Missing required event fields: title, category, date, venue, and budget.' });
     }
 
-    const validCategories = ['NSS', 'Tech', 'Non-Tech', 'Sports', 'Robotics'];
-    if (!validCategories.includes(category)) {
+    if (!ALLOWED_CATEGORIES.includes(category)) {
       return res.status(400).json({ error: 'Invalid event category specified.' });
     }
 
@@ -93,6 +122,9 @@ app.post('/api/events/propose', async (req, res) => {
   }
 });
 
+/**
+ * Retrieve all submitted proposals for club oversight
+ */
 app.get('/api/events/club/all', async (req, res) => {
   try {
     const events = await Event.find().sort({ createdAt: -1 });
@@ -102,6 +134,9 @@ app.get('/api/events/club/all', async (req, res) => {
   }
 });
 
+/**
+ * Retrieve proposals filtered by domain category for Faculty review
+ */
 app.get('/api/events/faculty/:domain', async (req, res) => {
   try {
     const events = await Event.find({ category: req.params.domain }).sort({ createdAt: -1 });
@@ -111,6 +146,9 @@ app.get('/api/events/faculty/:domain', async (req, res) => {
   }
 });
 
+/**
+ * Update faculty endorsement status for a domain event proposal
+ */
 app.patch('/api/events/:id/faculty-status', async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -118,7 +156,7 @@ app.patch('/api/events/:id/faculty-status', async (req, res) => {
     }
 
     const { status } = req.body;
-    if (!status || !['Pending', 'Approved', 'Rejected'].includes(status)) {
+    if (!status || !ALLOWED_STATUSES.includes(status)) {
       return res.status(400).json({ error: 'Invalid status. Must be Pending, Approved, or Rejected.' });
     }
 
@@ -131,6 +169,9 @@ app.patch('/api/events/:id/faculty-status', async (req, res) => {
   }
 });
 
+/**
+ * Retrieve all faculty-cleared proposals awaiting final HOD clearance
+ */
 app.get('/api/events/hod/proposals', async (req, res) => {
   try {
     const events = await Event.find({ facultyStatus: 'Approved' }).sort({ createdAt: -1 });
@@ -140,6 +181,9 @@ app.get('/api/events/hod/proposals', async (req, res) => {
   }
 });
 
+/**
+ * Grant HOD clearance, assign physical venue, and publish event live
+ */
 app.patch('/api/events/:id/hod-status', async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -147,7 +191,7 @@ app.patch('/api/events/:id/hod-status', async (req, res) => {
     }
 
     const { status, venue } = req.body;
-    if (!status || !['Pending', 'Approved', 'Rejected'].includes(status)) {
+    if (!status || !ALLOWED_STATUSES.includes(status)) {
       return res.status(400).json({ error: 'Invalid status. Must be Pending, Approved, or Rejected.' });
     }
 
@@ -164,7 +208,13 @@ app.patch('/api/events/:id/hod-status', async (req, res) => {
   }
 });
 
-// --- REGISTRATION & PARTICIPATION ROUTES ---
+// ==========================================
+// REGISTRATION & PARTICIPATION ROUTES
+// ==========================================
+
+/**
+ * Register a student or team for a live campus event and issue pass
+ */
 app.post('/api/registrations/register', async (req, res) => {
   try {
     const { eventName, category, leaderName, leaderRoll, branch, year } = req.body;
@@ -172,7 +222,7 @@ app.post('/api/registrations/register', async (req, res) => {
       return res.status(400).json({ error: 'Missing required registration fields: eventName, category, leaderName, leaderRoll, branch, and year.' });
     }
 
-    const passId = 'PASS-' + Math.floor(100000 + Math.random() * 900000);
+    const passId = generatePassId();
     const reg = new Registration({ ...req.body, passId });
     await reg.save();
     res.status(201).json({ message: 'Registered Successfully!', reg });
