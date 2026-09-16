@@ -23,6 +23,15 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/eventhive')
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, email, password, role, uniqueId, domain, year } = req.body;
+    if (!name || !email || !password || !role || !uniqueId) {
+      return res.status(400).json({ error: 'Please provide all required fields: name, email, password, role, and roll number/ID.' });
+    }
+
+    const validRoles = ['student', 'club', 'faculty', 'hod'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ error: 'Invalid user role specified.' });
+    }
+
     const existing = await User.findOne({ email });
     if (existing) return res.status(400).json({ error: 'User already exists' });
 
@@ -38,6 +47,10 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password, role } = req.body;
+    if (!email || !password || !role) {
+      return res.status(400).json({ error: 'Email, password, and role are required.' });
+    }
+
     const user = await User.findOne({ email, role });
     if (!user) return res.status(400).json({ error: 'Invalid Email or Role!' });
 
@@ -62,6 +75,16 @@ app.get('/api/events/live', async (req, res) => {
 
 app.post('/api/events/propose', async (req, res) => {
   try {
+    const { title, category, date, venue, budget } = req.body;
+    if (!title || !category || !date || !venue || budget === undefined || budget === null) {
+      return res.status(400).json({ error: 'Missing required event fields: title, category, date, venue, and budget.' });
+    }
+
+    const validCategories = ['NSS', 'Tech', 'Non-Tech', 'Sports', 'Robotics'];
+    if (!validCategories.includes(category)) {
+      return res.status(400).json({ error: 'Invalid event category specified.' });
+    }
+
     const event = new Event(req.body);
     await event.save();
     res.status(201).json({ message: 'Event proposed successfully!', event });
@@ -90,8 +113,18 @@ app.get('/api/events/faculty/:domain', async (req, res) => {
 
 app.patch('/api/events/:id/faculty-status', async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid event ID format.' });
+    }
+
     const { status } = req.body;
+    if (!status || !['Pending', 'Approved', 'Rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status. Must be Pending, Approved, or Rejected.' });
+    }
+
     const event = await Event.findByIdAndUpdate(req.params.id, { facultyStatus: status }, { new: true });
+    if (!event) return res.status(404).json({ error: 'Event not found.' });
+
     res.json(event);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -109,12 +142,22 @@ app.get('/api/events/hod/proposals', async (req, res) => {
 
 app.patch('/api/events/:id/hod-status', async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid event ID format.' });
+    }
+
     const { status, venue } = req.body;
+    if (!status || !['Pending', 'Approved', 'Rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status. Must be Pending, Approved, or Rejected.' });
+    }
+
     const updateData = { hodStatus: status };
     if (status === 'Approved') updateData.isLive = true;
     if (venue) updateData.venue = venue;
 
     const event = await Event.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    if (!event) return res.status(404).json({ error: 'Event not found.' });
+
     res.json(event);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -124,6 +167,11 @@ app.patch('/api/events/:id/hod-status', async (req, res) => {
 // --- REGISTRATION & PARTICIPATION ROUTES ---
 app.post('/api/registrations/register', async (req, res) => {
   try {
+    const { eventName, category, leaderName, leaderRoll, branch, year } = req.body;
+    if (!eventName || !category || !leaderName || !leaderRoll || !branch || !year) {
+      return res.status(400).json({ error: 'Missing required registration fields: eventName, category, leaderName, leaderRoll, branch, and year.' });
+    }
+
     const passId = 'PASS-' + Math.floor(100000 + Math.random() * 900000);
     const reg = new Registration({ ...req.body, passId });
     await reg.save();
