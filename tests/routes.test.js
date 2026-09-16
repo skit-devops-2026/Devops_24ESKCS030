@@ -39,4 +39,32 @@ test('API & Static Routes - HTTP Endpoints & Responses', async (t) => {
       .send({ email: 'incomplete@test.com' });
     assert.ok(res.status === 400 || res.status === 500);
   });
+
+  await t.test('GET /api/events/live should return live events collection with 200 OK', async () => {
+    const res = await request(app).get('/api/events/live');
+    assert.strictEqual(res.status, 200);
+    assert.ok(Array.isArray(res.body), 'Response body should be an array of events');
+  });
+
+  await t.test('POST /api/events/propose with missing required fields should return 400', async () => {
+    const res = await request(app)
+      .post('/api/events/propose')
+      .send({ title: 'Incomplete Event' });
+    assert.strictEqual(res.status, 400);
+    assert.ok(res.body.error, 'Should contain validation error message');
+  });
+
+  await t.test('PATCH /api/events/:id/faculty-status with invalid id format should return 400', async () => {
+    const res = await request(app)
+      .patch('/api/events/invalid-mongo-id-format/faculty-status')
+      .send({ status: 'Approved' });
+    assert.strictEqual(res.status, 400);
+    assert.strictEqual(res.body.error, 'Invalid event ID format.');
+  });
+
+  await t.test('GET /api/registrations/student/:roll should return student passes with 200 OK', async () => {
+    const res = await request(app).get('/api/registrations/student/24ESKCS030');
+    assert.strictEqual(res.status, 200);
+    assert.ok(Array.isArray(res.body), 'Response body should be an array of student registrations');
+  });
 });
